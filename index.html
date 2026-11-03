@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Camera Permission Demo</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #101827; color: #f4f7fb; }
+    main { width: min(92vw, 620px); padding: 24px; box-sizing: border-box; }
+    h1 { margin-top: 0; }
+    p { color: #c4cedb; line-height: 1.5; }
+    video { display: block; width: 100%; min-height: 220px; max-height: 60vh; background: #05080d; border-radius: 14px; margin: 18px 0; }
+    button { border: 0; border-radius: 10px; padding: 12px 18px; margin: 4px 8px 4px 0; font-weight: 650; cursor: pointer; }
+    #start { background: #75d6a3; color: #102018; }
+    #stop { background: #e5eaf0; color: #17202b; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    #status { min-height: 1.5em; font-weight: 600; }
+    .note { border: 1px solid #35445a; border-radius: 12px; padding: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Camera Permission Demo</h1>
+    <p>This page demonstrates the browser's camera permission prompt. The camera starts only after you press the button and grant permission.</p>
+    <div class="note">Privacy: video stays in this page. Nothing is recorded, uploaded, or saved. Press Stop to turn the camera off.</div>
+    <video id="preview" autoplay playsinline muted></video>
+    <button id="start" type="button">Allow camera &amp; start preview</button>
+    <button id="stop" type="button" disabled>Stop camera</button>
+    <p id="status" role="status" aria-live="polite">Camera is off.</p>
+  </main>
+  <script>
+    const preview = document.getElementById('preview');
+    const startButton = document.getElementById('start');
+    const stopButton = document.getElementById('stop');
+    const status = document.getElementById('status');
+    let stream = null;
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      preview.srcObject = null;
+      startButton.disabled = false;
+      stopButton.disabled = true;
+      status.textContent = 'Camera is off.';
+    }
+
+    startButton.addEventListener('click', async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        status.textContent = 'Camera access requires a supported browser and a secure HTTPS page.';
+        return;
+      }
+      startButton.disabled = true;
+      status.textContent = 'Waiting for camera permission…';
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        preview.srcObject = stream;
+        stopButton.disabled = false;
+        status.textContent = 'Camera preview is on. Nothing is being recorded or uploaded.';
+      } catch (error) {
+        startButton.disabled = false;
+        status.textContent = error.name === 'NotAllowedError'
+          ? 'Permission was not granted. You can allow it in browser site settings.'
+          : 'Could not start the camera: ' + error.message;
+      }
+    });
+
+    stopButton.addEventListener('click', stopCamera);
+    window.addEventListener('pagehide', stopCamera);
+  </script>
+</body>
+</html>
